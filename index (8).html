@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>avyxl</title>
+<meta name="description" content="avyxl — software developer. local-first web tools, peer-to-peer apps and telemetry systems.">
+<meta name="theme-color" content="#060606">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+:root{
+  --bg:#060606;--s1:rgba(16,16,16,.72);--s2:#151515;--s3:#202020;
+  --line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.2);
+  --text:#f4f4f4;--mute:#8c8c8c;--dim:#5a5a5a;
+  --sans:'Geist',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'Geist Mono',ui-monospace,Menlo,Consolas,monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg);color-scheme:dark;scrollbar-width:thin;scrollbar-color:#2a2a2a transparent}
+::selection{background:#fff;color:#000}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh;line-height:1.5;text-transform:lowercase;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;border:0;background:none;text-transform:inherit}
+:focus-visible{outline:2px solid var(--text);outline-offset:3px}
+svg{flex-shrink:0}
+.has-cursor,.has-cursor *{cursor:none!important}
+
+/* background */
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+.blob{position:fixed;z-index:0;width:70vmax;height:70vmax;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.07),transparent 62%);filter:blur(30px);pointer-events:none;animation:drift 26s ease-in-out infinite alternate}
+.b1{top:-30vmax;left:-20vmax}.b2{bottom:-35vmax;right:-25vmax;animation-delay:-13s;animation-duration:32s}
+@keyframes drift{to{transform:translate(12vmax,8vmax) scale(1.15)}}
+
+/* cursor */
+#cd,#cr{position:fixed;top:0;left:0;pointer-events:none;z-index:10002;border-radius:50%;opacity:0}
+#cd{width:6px;height:6px;background:#fff;mix-blend-mode:difference}
+#cr{width:34px;height:34px;border:1.5px solid rgba(255,255,255,.35);transition:width .3s var(--ease),height .3s var(--ease),background .3s}
+.has-cursor #cd,.has-cursor #cr{opacity:1}
+.hovering #cr{width:54px;height:54px;background:rgba(255,255,255,.07)}
+
+/* char animation */
+.ch{display:inline-block;transition:transform .35s var(--ease)}
+.ch:hover{transform:translateY(-.14em)}
+.go .ch{animation:chIn 1s var(--ease) backwards;animation-delay:var(--d)}
+@keyframes chIn{from{opacity:0;transform:translateY(.7em) rotate(8deg);filter:blur(12px)}}
+@keyframes rise{from{opacity:0;transform:translateY(22px);filter:blur(6px)}}
+.caret{display:inline-block;width:2px;height:1.05em;background:var(--text);margin-left:3px;vertical-align:-.15em;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* gate */
+#gate{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:24px;background:rgba(6,6,6,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:opacity .9s var(--ease),visibility .9s}
+#gate.out{opacity:0;visibility:hidden}
+.gate-card{width:100%;max-width:390px;background:var(--s1);border:1px solid var(--line);border-radius:32px;padding:44px 32px 30px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;box-shadow:0 40px 90px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.06);animation:rise 1s var(--ease) both;transition:transform .9s var(--ease)}
+.out .gate-card{transform:scale(1.06)}
+.gate-icon{width:68px;height:68px;border-radius:22px;background:var(--s2);border:1px solid var(--line);display:grid;place-items:center;margin-bottom:16px;position:relative}
+.gate-icon::after{content:"";position:absolute;inset:-1px;border-radius:22px;border:1px solid #fff;opacity:0;animation:ping 2.8s ease-out infinite}
+@keyframes ping{from{opacity:.4;transform:scale(1)}to{opacity:0;transform:scale(1.5)}}
+.gate-icon svg{width:27px;height:27px}
+.gate-card h1{font-size:30px;font-weight:600;letter-spacing:-.04em}
+.gate-card p{color:var(--mute);font-size:14px;max-width:250px;margin-bottom:22px;animation:rise 1s .5s var(--ease) backwards}
+.btn-main{width:100%;height:54px;border-radius:18px;background:var(--text);color:#000;font-weight:600;font-size:15px;display:flex;align-items:center;justify-content:center;gap:12px;position:relative;overflow:hidden;transition:transform .3s var(--ease)}
+.btn-main:hover{transform:translateY(-2px)}
+.btn-main:active{transform:scale(.97)}
+.btn-main kbd{font-family:var(--mono);font-size:12px;background:rgba(0,0,0,.1);border-radius:6px;padding:2px 7px}
+.fill{position:absolute;inset:0;background:rgba(0,0,0,.16);transform:scaleX(0);transform-origin:left;transition:transform .9s cubic-bezier(.6,0,.2,1)}
+.unlocking .fill{transform:scaleX(1)}
+.gate-foot{margin-top:14px;font-family:var(--mono);font-size:11px;color:var(--dim)}
+
+/* app */
+#app{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:18px 20px 72px;opacity:0;transition:opacity 1s var(--ease)}
+#app.on{opacity:1}
+nav{position:sticky;top:16px;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 8px 8px 20px;background:rgba(14,14,14,.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--line);border-radius:999px;box-shadow:0 12px 40px rgba(0,0,0,.4)}
+.on nav{animation:rise 1s .1s var(--ease) backwards}
+.brand{font-weight:600;letter-spacing:-.02em;display:flex;align-items:center;gap:10px;font-size:15px}
+.brand svg{width:19px;height:19px;animation:spin 18s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tabs{position:relative;display:flex;gap:2px;padding:4px;background:rgba(0,0,0,.45);border:1px solid var(--line);border-radius:999px}
+.ind{position:absolute;top:4px;bottom:4px;left:0;border-radius:999px;background:var(--s3);border:1px solid var(--line2);box-shadow:0 4px 18px rgba(255,255,255,.05);transition:transform .55s var(--ease),width .55s var(--ease)}
+.tab{position:relative;display:flex;align-items:center;gap:8px;padding:9px 18px;border-radius:999px;color:var(--mute);font-size:14px;font-weight:500;transition:color .3s}
+.tab span{display:inline-block;white-space:nowrap}
+.tab svg{width:16px;height:16px;transition:transform .5s var(--ease)}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--text)}
+.tab.active svg{transform:scale(1.15) rotate(-6deg)}
+.right{display:flex;align-items:center;gap:6px}
+.icb{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--mute);border:1px solid var(--line);background:rgba(0,0,0,.35);transition:all .3s var(--ease)}
+.icb:hover{color:var(--text);border-color:var(--line2);transform:scale(1.06)}
+.icb svg{width:16px;height:16px}
+.muted .on-i,:not(.muted) .off-i{display:none}
+.stat{display:flex;align-items:center;gap:9px;height:40px;padding:0 16px 0 14px;border-radius:999px;font-family:var(--mono);font-size:12px;color:var(--mute);border:1px solid var(--line);background:rgba(0,0,0,.35);transition:all .3s var(--ease)}
+.stat:hover{color:var(--text);border-color:var(--line2)}
+.stat i{width:7px;height:7px;border-radius:50%;background:var(--text);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.2;transform:scale(.7)}}
+
+.panel{display:none;padding-top:56px}
+.panel.active{display:block}
+.on .panel.active .rv{animation:rise .9s var(--ease) backwards;animation-delay:calc(var(--i)*90ms + 150ms)}
+.head h2{text-wrap:balance;font-size:clamp(30px,5vw,44px);font-weight:600;letter-spacing:-.04em;line-height:1.1}
+.head p{color:var(--mute);margin-top:10px;max-width:520px;margin-bottom:34px}
+
+/* hero */
+.hero{display:grid;grid-template-columns:1fr auto;gap:48px;align-items:center;padding:12px 0 8px}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:7px 14px 7px 11px;border:1px solid var(--line);border-radius:999px;background:var(--s1);font-size:13px;color:var(--mute);margin-bottom:22px}
+.pill svg{width:14px;height:14px}
+.hero h1{font-size:clamp(56px,11vw,112px);font-weight:600;letter-spacing:-.065em;line-height:.95}
+.role{font-size:clamp(18px,2.6vw,24px);color:var(--mute);margin-top:22px;min-height:1.5em;font-weight:500;letter-spacing:-.02em}
+.role b{color:var(--text);font-weight:500}
+.bio{color:var(--mute);margin:18px 0 28px;max-width:520px;font-size:16px;line-height:1.7}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:9px;height:46px;padding:0 22px;border-radius:999px;font-size:14px;font-weight:500;background:var(--s1);border:1px solid var(--line);transition:all .35s var(--ease)}
+.btn svg{width:17px;height:17px}
+.btn:hover{background:var(--s3);border-color:var(--line2);transform:translateY(-2px)}
+.btn.solid{background:var(--text);color:#000;border-color:transparent}
+.btn.solid:hover{background:#fff;box-shadow:0 10px 36px rgba(255,255,255,.18)}
+.avatar{position:relative;width:240px;height:240px;border-radius:44px;padding:2px;overflow:hidden}
+.avatar::before{content:"";position:absolute;inset:-60%;background:conic-gradient(from 0deg,transparent 0 60%,rgba(255,255,255,.85) 85%,transparent 100%);animation:spin 5s linear infinite}
+.avatar img,.avatar .ph{position:relative;width:100%;height:100%;border-radius:42px;object-fit:cover;background:var(--s2);display:grid;place-items:center;font-size:84px;font-weight:600;color:var(--mute)}
+
+.duo{display:grid;grid-template-columns:3fr 2fr;gap:16px;margin-top:56px}
+.box{background:rgba(14,14,14,.82);border:1px solid var(--line);border-radius:28px;padding:26px}
+.box h3{font-size:14px;font-weight:500;color:var(--mute);margin-bottom:16px}
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.chip{display:flex;align-items:center;gap:11px;padding:9px 18px 9px 10px;background:var(--s2);border:1px solid var(--line);border-radius:16px;font-size:14px;font-weight:500;transition:all .35s var(--ease)}
+.chip:hover{border-color:var(--line2);background:var(--s3);transform:translateY(-3px)}
+.tile{width:34px;height:34px;border-radius:11px;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;color:var(--c)}
+.tile svg{width:17px;height:17px;filter:drop-shadow(0 0 7px var(--c))}
+.rows{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;align-items:center;gap:14px;padding:10px 16px 10px 10px;background:var(--s2);border:1px solid var(--line);border-radius:18px;text-align:left;width:100%;transition:all .35s var(--ease)}
+.row:hover{border-color:var(--line2);background:var(--s3);transform:translateX(4px)}
+.row small{display:block;color:var(--mute);font-size:12px}
+.row span{font-weight:500;font-size:14px}
+.row>svg{margin-left:auto;width:16px;height:16px;color:var(--dim);transition:all .3s}
+.row:hover>svg{color:var(--text);transform:translate(2px,-2px)}
+
+/* projects */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.card{position:relative;overflow:hidden;background:rgba(14,14,14,.82);border:1px solid var(--line);border-radius:28px;padding:26px;display:flex;flex-direction:column;gap:16px;transition:border-color .4s,transform .5s var(--ease)}
+.card::after{content:"";position:absolute;inset:0;background:radial-gradient(340px circle at var(--mx,50%) var(--my,0%),rgba(255,255,255,.09),transparent 60%);opacity:0;transition:opacity .4s;pointer-events:none}
+.card:hover{border-color:var(--line2);transform:translateY(-5px)}
+.card:hover::after{opacity:1}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.name{display:flex;align-items:center;gap:14px;font-size:20px;font-weight:600;letter-spacing:-.03em}
+.ico{width:48px;height:48px;border-radius:16px;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;color:var(--c);transition:transform .6s var(--ease)}
+.ico svg{width:22px;height:22px;filter:drop-shadow(0 0 8px var(--c))}
+.card:hover .ico{transform:rotate(-8deg) scale(1.1)}
+.badge{font-size:12px;font-weight:500;color:var(--mute);padding:4px 12px;border:1px solid var(--line);border-radius:999px}
+.desc{color:var(--mute);font-size:14px;line-height:1.7;flex:1}
+.foot{display:flex;align-items:center;justify-content:space-between;padding-top:16px;border-top:1px solid var(--line)}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-family:var(--mono);font-size:11.5px;color:var(--mute);background:var(--bg);border:1px solid var(--line);padding:4px 10px;border-radius:9px}
+.links{display:flex;gap:8px}
+.lk{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--bg);border:1px solid var(--line);color:var(--mute);transition:all .35s var(--ease)}
+.lk svg{width:15px;height:15px}
+.lk:hover{background:var(--text);color:#000;border-color:var(--text);transform:scale(1.1)}
+
+#toast{position:fixed;left:50%;bottom:28px;z-index:10001;transform:translate(-50%,40px);opacity:0;display:flex;align-items:center;gap:10px;padding:12px 20px;border-radius:999px;background:var(--s3);border:1px solid var(--line2);font-size:14px;transition:all .6s var(--ease);pointer-events:none}
+#toast.show{transform:translate(-50%,0);opacity:1}
+#toast svg{width:16px;height:16px}
+
+@media(max-width:820px){
+  .hero{grid-template-columns:1fr;gap:36px}
+  .avatar{order:-1;width:150px;height:150px;border-radius:32px}.avatar img,.avatar .ph{border-radius:30px;font-size:54px}
+  .duo{grid-template-columns:1fr}
+  .tab span,.stat span{display:none}.tab{padding:10px 15px}.stat{padding:0 13px}
+}
+@media(max-width:420px){.grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){*,*::before{animation:none!important;transition-duration:.01s!important}}
+
+/* daemon */
+#dm{margin-top:16px}
+.dm-top{display:flex;align-items:center;flex-wrap:wrap;gap:14px;margin-bottom:18px}
+.dm-top .tile{--c:#a78bfa;width:40px;height:40px;border-radius:13px}
+.dm-title{min-width:0}
+.dm-title h3{margin:0;color:var(--text);font-size:16px;font-weight:600}
+.dm-title small{display:block;color:var(--mute);font-size:13px}
+.dm-status{margin-left:auto;display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:rgba(0,0,0,.35);font-family:var(--mono);font-size:11.5px;color:var(--mute);white-space:nowrap}
+.dm-status i{width:7px;height:7px;border-radius:50%;background:var(--dim);transition:all .4s}
+.dm-status[data-k=load] i{background:#fbbf24;animation:blink 1s steps(1) infinite}
+.dm-status[data-k=ready] i{background:#34d399;box-shadow:0 0 8px #34d399}
+.dm-status[data-k=lite] i{background:#fbbf24}
+#dm-log{display:flex;flex-direction:column;gap:10px;min-height:110px;max-height:340px;overflow-y:auto;padding:2px;font-size:14px;line-height:1.55;scrollbar-width:thin;scrollbar-color:#2a2a2a transparent}
+.dm-m{max-width:min(560px,90%);padding:10px 16px;border-radius:20px;white-space:pre-wrap;overflow-wrap:anywhere}
+.dm-u{align-self:flex-end;background:var(--text);color:#000;border-bottom-right-radius:6px}
+.dm-a{align-self:flex-start;background:var(--s2);border:1px solid var(--line);border-bottom-left-radius:6px}
+.dm-s{align-self:stretch;max-width:100%;padding:2px 4px;color:var(--mute);font-size:13px}
+.dm-bar{height:3px;border-radius:3px;margin:10px 0 6px;background:var(--line);overflow:hidden;min-width:200px}
+.dm-bar i{display:block;height:100%;width:0;background:var(--text);transition:width .25s}
+.dm-pct{display:block;font-family:var(--mono);font-size:11px;color:var(--dim)}
+.dm-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.dm-chips[hidden]{display:none}
+.dm-chips button{font-size:13px;color:var(--mute);padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--bg);transition:all .35s var(--ease)}
+.dm-chips button:hover{color:var(--text);border-color:var(--line2);background:var(--s2);transform:translateY(-2px)}
+#dm-form{display:flex;gap:10px;margin-top:14px}
+#dm-in{flex:1;min-width:0;height:46px;padding:0 20px;border-radius:999px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:var(--text);font:inherit;font-size:14px;text-transform:inherit;transition:border-color .3s}
+#dm-in::placeholder{color:var(--dim)}
+#dm-in:focus,#dm-in:focus-visible{border-color:var(--line2);outline:0}
+#dm-send{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:var(--text);color:#000;transition:transform .3s var(--ease),opacity .3s}
+#dm-send:hover:not(:disabled){transform:scale(1.07)}
+#dm-send svg{width:18px;height:18px}
+#dm-send:disabled,#dm-in:disabled{opacity:.4}
+.dm-note{margin-top:12px;font-family:var(--mono);font-size:11px;color:var(--dim);line-height:1.6}
+.dm-typing{display:inline-flex;gap:4px;vertical-align:middle;padding:3px 0}
+.dm-typing i{width:5px;height:5px;border-radius:50%;background:var(--mute);animation:dmb 1s ease-in-out infinite}
+.dm-typing i:nth-child(2){animation-delay:.15s}.dm-typing i:nth-child(3){animation-delay:.3s}
+@keyframes dmb{50%{opacity:.25;transform:translateY(-2px)}}
+@media(max-width:560px){.dm-status{margin-left:54px}}
+.dm-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.dm-l{display:inline-flex;align-items:center;height:30px;padding:0 13px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--mute);font-size:12.5px;transition:all .35s var(--ease)}
+.dm-l:hover{color:var(--text);border-color:var(--line2);background:var(--s3);transform:translateY(-2px)}
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas><div class="blob b1"></div><div class="blob b2"></div>
+<div id="cd"></div><div id="cr"></div>
+<div id="toast" role="status" aria-live="polite"><i data-lucide="check"></i><span></span></div>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-icon"><i data-lucide="lock-keyhole"></i></div>
+    <h1 id="gt">avyxl</h1>
+    <p>step inside. soft sound plays while you browse.</p>
+    <button id="enter" class="btn-main"><span class="fill"></span><span id="el">enter portfolio</span><kbd>↵</kbd></button>
+    <div class="gate-foot">press enter or click</div>
+  </div>
+</div>
+
+<div id="app">
+  <nav>
+    <div class="brand"><i data-lucide="hexagon"></i>avyxl</div>
+    <div class="tabs" id="tabs" role="tablist">
+      <span class="ind"></span>
+      <button class="tab active" role="tab" aria-selected="true" data-tab="home"><i data-lucide="user-round"></i><span>developer</span></button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="web"><i data-lucide="globe"></i><span>web</span></button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="fps"><i data-lucide="gauge"></i><span>infra</span></button>
+    </div>
+    <div class="right">
+      <button class="icb" id="snd" aria-label="toggle sound"><i data-lucide="volume-2" class="on-i"></i><i data-lucide="volume-x" class="off-i"></i></button>
+      <button class="stat" data-copy aria-label="copy discord username"><i></i><span>doorsondoors</span></button>
+    </div>
+  </nav>
+
+  <section id="tab-home" class="panel active">
+    <div class="hero">
+      <div>
+        <div class="pill rv"><i data-lucide="map-pin"></i>based in the uk</div>
+        <h1 id="name">avyxl</h1>
+        <div class="role rv">i build <b id="tw"></b><span class="caret"></span></div>
+        <p class="bio rv">software developer making zero-dependency, local-first web utilities and telemetry systems. no central servers, just peer-to-peer webrtc and client-side cryptography.</p>
+        <div class="actions rv">
+          <button class="btn solid" data-copy><i data-lucide="message-circle"></i>discord · doorsondoors</button>
+          <a class="btn" href="https://github.com/avyxl" target="_blank" rel="noopener"><i data-lucide="github"></i>github</a>
+        </div>
+      </div>
+      <div class="avatar rv"><img src="download%20(15).jpg" alt="avyxl profile picture" onerror="this.outerHTML='<div class=ph>a</div>'"></div>
+    </div>
+    <div class="duo">
+      <div class="box rv"><h3>tech stack</h3><div class="chips" id="stack"></div></div>
+      <div class="box rv"><h3>find me</h3>
+        <div class="rows">
+          <button class="row" data-copy><div class="tile" style="--c:#818cf8"><i data-lucide="message-circle"></i></div><div><small>discord</small><span>doorsondoors</span></div><i data-lucide="copy"></i></button>
+          <a class="row" href="https://github.com/avyxl" target="_blank" rel="noopener"><div class="tile" style="--c:#e5e5e5"><i data-lucide="github"></i></div><div><small>github</small><span>@avyxl</span></div><i data-lucide="arrow-up-right"></i></a>
+        </div>
+      </div>
+    </div>
+    <div class="box rv" id="dm">
+      <div class="dm-top">
+        <div class="tile"><i data-lucide="cpu"></i></div>
+        <div class="dm-title"><h3>ask daemon</h3><small>ask about my projects, the stack, or how to get in touch.</small></div>
+        <span class="dm-status" id="dm-status" data-k="ready"><i></i><span>runs locally</span></span>
+      </div>
+      <div id="dm-log" aria-live="polite"></div>
+      <div class="dm-chips" id="dm-chips"></div>
+      <form id="dm-form">
+        <input id="dm-in" placeholder="ask me anything about avyxl" autocomplete="off" aria-label="ask daemon a question">
+        <button id="dm-send" aria-label="send question"><i data-lucide="arrow-up"></i></button>
+      </form>
+      <p class="dm-note" id="dm-note">no ai model and no server. daemon runs in your browser and only knows what is on this page, so nothing you type leaves it.</p>
+    </div>
+  </section>
+
+  <section id="tab-web" class="panel">
+    <div class="head"><h2 class="scr rv">cryptography & networking</h2><p class="rv">serverless apps using direct peer-to-peer connections and local encryption.</p></div>
+    <div class="grid" id="g-web"></div>
+  </section>
+
+  <section id="tab-fps" class="panel">
+    <div class="head"><h2 class="scr rv">telemetry & optimization</h2><p class="rv">tools for analyzing mechanical performance and cutting hardware latency.</p></div>
+    <div class="grid" id="g-fps"></div>
+  </section>
+</div>
+
+<script>
+let mx=-999,my=-999;
+
+/* ---------- data + render ---------- */
+const P=[
+['web','radio','#22d3ee','flux','deployed','serverless peer-to-peer live chat. direct browser-to-browser webrtc channels with client-side aes-256 encryption.',['webrtc','e2ee']],
+['web','folder-lock','#fbbf24','dossier','deployed','encrypted note and file sharing. zero-width space steganography, stateless url hashes, and local .dsr exports.',['cryptojs','stego']],
+['web','key-round','#34d399','cryptavault','deployed','client-side key generator and offline vault. hashes credentials locally with no network exposure.',['sha-256','vault']],
+['fps','layout-dashboard','#a78bfa','zenith','hub','central dashboard linking aim telemetry and optimization tools, with local batch scripts for os tuning.',['python','css3d']],
+['fps','activity','#fb7185','metric','active',"aim telemetry analyzer. processes kovaak's diagnostics to find mechanical weak points and track growth.",['c++','analysis']],
+['fps','database','#60a5fa','arc','active','aim training benchmark vault with share codes and routines for voltaic, viscose and aimerz+, plus filtering.',['vault','filtering']],
+['fps','mouse','#fb923c','loadout','active','esports peripheral comparison guide tracking sensor latency, polling rates and actuation points.',['lua','hardware']]];
+P.forEach(([g,i,c,n,b,d,t])=>{
+  document.getElementById('g-'+g).insertAdjacentHTML('beforeend',
+  `<article class="card rv"><div class="top"><div class="name"><div class="ico" style="--c:${c}"><i data-lucide="${i}"></i></div><span>${n}</span></div><span class="badge">${b}</span></div><p class="desc">${d}</p><div class="foot"><div class="tags">${t.map(x=>`<span class="tag">${x}</span>`).join('')}</div><div class="links"><a class="lk" href="https://github.com/avyxl/${n}" target="_blank" rel="noopener" aria-label="${n} source"><i data-lucide="github"></i></a><a class="lk" href="https://avyxl.github.io/${n}" target="_blank" rel="noopener" aria-label="open ${n}"><i data-lucide="arrow-up-right"></i></a></div></div></article>`);
+});
+[['file-code','#60a5fa','c++'],['file-json','#facc15','python'],['terminal','#a78bfa','lua'],['layout-template','#fb923c','js / html']].forEach(([i,c,n])=>
+  document.getElementById('stack').insertAdjacentHTML('beforeend',`<div class="chip"><div class="tile" style="--c:${c}"><i data-lucide="${i}"></i></div>${n}</div>`));
+document.querySelectorAll('.panel').forEach(p=>p.querySelectorAll('.rv').forEach((e,i)=>e.style.setProperty('--i',i)));
+if(window.lucide)lucide.createIcons();
+
+/* ---------- text fx ---------- */
+function split(el){const t=el.textContent;el.textContent='';[...t].forEach((c,i)=>{const s=document.createElement('span');s.className='ch';s.textContent=c===' '?'\u00a0':c;s.style.setProperty('--d',i*70+'ms');el.appendChild(s)})}
+function scramble(el){const f=el.dataset.t||(el.dataset.t=el.textContent),a='abcdefghijklmnopqrstuvwxyz0123456789#/_',N=24;let k=0;clearInterval(el._i);
+  el._i=setInterval(()=>{k++;el.textContent=[...f].map((c,i)=>c===' '||c==='&'?c:(i<k*f.length/N?c:a[Math.random()*a.length|0])).join('');if(k>=N){clearInterval(el._i);el.textContent=f}},30)}
+split(document.getElementById('name'));split(document.getElementById('gt'));
+document.getElementById('gate').classList.add('go');
+const roles=['local-first web tools','peer-to-peer apps','client-side cryptography','telemetry systems'],tw=document.getElementById('tw');
+let ri=0,ci=0,del=false,twOn=false;
+function type(){if(!twOn)return;const w=roles[ri];ci+=del?-1:1;tw.textContent=w.slice(0,ci);
+  if(!del&&ci%2===0&&ci)tick();
+  let d=del?28:62;if(!del&&ci===w.length){del=true;d=1500}else if(del&&ci===0){del=false;ri=(ri+1)%roles.length;d=350}
+  setTimeout(type,d)}
+
+/* ---------- audio: pentatonic, soft, with a gentle echo ---------- */
+let ac,master,padG,on=true,lastH=0;
+const S=[261.63,293.66,329.63,392,440,523.25,587.33,659.25,783.99];
+function initAudio(){
+  ac=new(window.AudioContext||window.webkitAudioContext)();
+  master=ac.createGain();master.gain.value=.9;
+  const d=ac.createDelay(1),fb=ac.createGain(),wet=ac.createGain(),lp=ac.createBiquadFilter();
+  d.delayTime.value=.3;fb.gain.value=.4;wet.gain.value=.4;lp.type='lowpass';lp.frequency.value=2000;
+  master.connect(ac.destination);master.connect(d);d.connect(lp);lp.connect(fb);fb.connect(d);lp.connect(wet);wet.connect(ac.destination);
+  if(ac.state==='suspended')ac.resume();
+}
+function note(f,v=.04,dur=1.4,at=0,type='sine'){
+  if(!ac||!on||!isFinite(f))return;const t=ac.currentTime+at,g=ac.createGain();
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.025);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  [[f,1],[f*2,.18],[f*3,.05]].forEach(([fr,m])=>{const o=ac.createOscillator(),og=ac.createGain();o.type=type;o.frequency.value=fr;og.gain.value=m;o.connect(og);og.connect(g);o.start(t);o.stop(t+dur+.1)});
+  g.connect(master);
+}
+const arp=(ids,gap=.11,v=.045)=>ids.forEach((n,i)=>note(S[n],v,1.6,i*gap));
+const sfx={
+  hover(){const n=performance.now();if(n-lastH<110)return;lastH=n;note(S[2+(Math.random()*7|0)],.014,1.1)},
+  click(){note(196,.05,.5);note(392,.025,.7,.03)},
+  tab(i){arp([i*2+1,i*2+3,i*2+4],.09,.04)},
+  copy(){arp([4,6,8],.08,.05)},
+  gate(){arp([0,2,4,5,7,8],.13,.05)}
+};
+function tick(){note(1760+Math.random()*400,.006,.12)}
+function startPad(){
+  padG=ac.createGain();padG.gain.value=0;const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.value=650;
+  padG.connect(f);f.connect(master);padG.gain.linearRampToValueAtTime(.05,ac.currentTime+6);
+  [110,164.81,196,246.94,329.63].forEach((fr,i)=>{
+    const o=ac.createOscillator(),g=ac.createGain(),l=ac.createOscillator(),lg=ac.createGain();
+    o.type='sine';o.frequency.value=fr;o.detune.value=(i-2)*4;g.gain.value=.2;
+    l.frequency.value=.05+i*.03;lg.gain.value=.12;l.connect(lg);lg.connect(g.gain);
+    o.connect(g);g.connect(padG);o.start();l.start()});
+}
+document.getElementById('snd').addEventListener('click',()=>{
+  on=!on;document.body.classList.toggle('muted',!on);
+  if(master)master.gain.setTargetAtTime(on?.9:0,ac.currentTime,.15);
+  if(on)note(S[3],.04,.5);
+});
+
+/* ---------- gate ---------- */
+let entered=false;const gate=document.getElementById('gate');
+function enter(){
+  if(entered)return;entered=true;
+  try{initAudio();sfx.gate();setTimeout(startPad,500)}catch(e){}
+  gate.classList.add('unlocking');document.getElementById('el').textContent='unlocking';
+  setTimeout(()=>{gate.classList.add('out');const a=document.getElementById('app');a.classList.add('on','go');moveInd();twOn=true;type()},950);
+}
+document.getElementById('enter').addEventListener('click',enter);
+addEventListener('keydown',e=>{if(e.key==='Enter'&&!entered){e.preventDefault();enter()}});
+
+/* ---------- tabs ---------- */
+const tabs=[...document.querySelectorAll('.tab')],ind=document.querySelector('.ind');
+function moveInd(){const a=document.querySelector('.tab.active');ind.style.width=a.offsetWidth+'px';ind.style.transform=`translateX(${a.offsetLeft}px)`}
+addEventListener('resize',moveInd);if(document.fonts)document.fonts.ready.then(moveInd);moveInd();
+function show(name,sound){
+  const b=tabs.find(t=>t.dataset.tab===name);if(!b||b.classList.contains('active'))return;
+  if(sound)sfx.tab(tabs.indexOf(b));
+  tabs.forEach(x=>{const a=x===b;x.classList.toggle('active',a);x.setAttribute('aria-selected',a)});moveInd();
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+name));
+  document.querySelectorAll('.panel.active .scr').forEach(e=>scramble(e));
+  if(name==='home')document.querySelectorAll('#tab-home .ch').forEach(c=>{c.style.animation='none';c.offsetWidth;c.style.animation=''});
+  try{history.replaceState(null,'','#'+name)}catch(e){}
+  scrollTo({top:0,behavior:sound?'smooth':'auto'});
+}
+tabs.forEach((b,i)=>{
+  b.addEventListener('click',()=>show(b.dataset.tab,true));
+  b.addEventListener('mouseenter',()=>{const s=b.querySelector('span');if(!s.style.width)s.style.width=s.offsetWidth+'px';scramble(s)});
+  b.addEventListener('keydown',e=>{
+    const d=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0;if(!d)return;
+    const n=tabs[(i+d+tabs.length)%tabs.length];n.focus();show(n.dataset.tab,true);
+  });
+});
+if(location.hash)show(location.hash.slice(1),false);
+
+/* ---------- copy discord ---------- */
+const toast=document.getElementById('toast');let tt;
+document.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',async()=>{
+  try{await navigator.clipboard.writeText('doorsondoors')}catch(e){}
+  sfx.copy();toast.querySelector('span').textContent='copied discord · doorsondoors';
+  toast.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>toast.classList.remove('show'),2200);
+}));
+
+/* ---------- delegated hover/click sound + card spotlight ---------- */
+const HS='.tab,.chip,.card,.btn,.lk,.row,.icb,.stat';let lastEl=null;
+document.addEventListener('mouseover',e=>{const t=e.target.closest(HS);document.body.classList.toggle('hovering',!!e.target.closest('a,button,.card,.chip'));
+  if(t&&t!==lastEl)sfx.hover();lastEl=t});
+document.addEventListener('click',e=>{if(e.target.closest('.btn,.lk,.row,.icb')&&!e.target.closest('[data-copy]'))sfx.click()});
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;const c=e.target.closest('.card');if(!c)return;const r=c.getBoundingClientRect();c.style.setProperty('--mx',e.clientX-r.left+'px');c.style.setProperty('--my',e.clientY-r.top+'px')});
+
+/* ---------- cursor ---------- */
+if(matchMedia('(hover:hover) and (pointer:fine)').matches){
+  document.documentElement.classList.add('has-cursor');
+  const d=document.getElementById('cd'),r=document.getElementById('cr');let rx=-999,ry=-999;
+  addEventListener('mousemove',e=>{d.style.transform=`translate3d(${e.clientX-3}px,${e.clientY-3}px,0)`;if(rx===-999){rx=e.clientX;ry=e.clientY}});
+  document.documentElement.addEventListener('mouseleave',()=>{d.style.opacity=0;r.style.opacity=0});
+  document.documentElement.addEventListener('mouseenter',()=>{d.style.opacity='';r.style.opacity=''});
+  (function l(){rx+=(mx-rx)*.18;ry+=(my-ry)*.18;const o=r.offsetWidth/2;r.style.transform=`translate3d(${rx-o}px,${ry-o}px,0)`;requestAnimationFrame(l)})();
+}
+
+document.addEventListener("visibilitychange",()=>{if(!ac)return;document.hidden?ac.suspend():ac.resume()});
+
+/* ---------- animated background: drifting constellation ---------- */
+const cv=document.getElementById('bg'),cx=cv.getContext('2d');let W,H,pts=[];
+const still=matchMedia('(prefers-reduced-motion:reduce)').matches;
+function size(){const dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;cx.setTransform(dpr,0,0,dpr,0,0);
+  pts=Array.from({length:W<700?38:80},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.28,vy:(Math.random()-.5)*.28,r:Math.random()*1.3+.4}))}
+size();addEventListener('resize',size);
+(function draw(){
+  cx.clearRect(0,0,W,H);
+  for(const p of pts){
+    if(!still){p.x+=p.vx;p.y+=p.vy}
+    if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1;
+    const dx=p.x-mx,dy=p.y-my,d=Math.hypot(dx,dy);
+    if(d<140&&d>0){p.x+=dx/d*(140-d)*.012;p.y+=dy/d*(140-d)*.012}
+    cx.fillStyle='rgba(255,255,255,.55)';cx.beginPath();cx.arc(p.x,p.y,p.r,0,6.283);cx.fill();
+  }
+  for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
+    const a=pts[i],b=pts[j],d=Math.hypot(a.x-b.x,a.y-b.y);
+    if(d<130){cx.strokeStyle=`rgba(255,255,255,${(1-d/130)*.14})`;cx.lineWidth=.8;cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.stroke()}
+  }
+  for(const p of pts){const d=Math.hypot(p.x-mx,p.y-my);if(d<170){cx.strokeStyle=`rgba(255,255,255,${(1-d/170)*.3})`;cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(mx,my);cx.stroke()}}
+  requestAnimationFrame(draw);
+})();
+</script>
+
+<script>
+/* daemon: a small offline assistant. no model and no server. it scores intents, fuzzy-matches names and topics, and remembers the last project you asked about. it reads its facts from the P array above. */
+(()=>{
+const proj=typeof P!=="undefined"?P:[];
+const GH="https://github.com/avyxl",PG="https://avyxl.github.io/";
+const GN={web:"cryptography & networking",fps:"telemetry & optimization"},GT={web:"web",fps:"infra"};
+const pick=a=>a[Math.random()*a.length|0];
+const norm=s=>s.toLowerCase().replace(/c\+\+/g,"cpp").replace(/[^a-z0-9\s]/g," ").split(/\s+/).filter(w=>w.length>1||/\d/.test(w));
+const stem=w=>w.length>4?w.replace(/(ing|ed|es|s)$/,""):w;
+const K=s=>norm(s).map(stem);
+function lev(a,b){const m=a.length,n=b.length;if(Math.abs(m-n)>2)return 9;const d=Array.from({length:m+1},(_,i)=>{const r=Array(n+1).fill(0);r[0]=i;return r});for(let j=0;j<=n;j++)d[0][j]=j;for(let i=1;i<=m;i++)for(let j=1;j<=n;j++){d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));if(i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1])d[i][j]=Math.min(d[i][j],d[i-2][j-2]+1)}return d[m][n]}
+const near=(a,b,min=5)=>a===b||(a.length>=min&&b.length>=min&&lev(a,b)<=(Math.max(a.length,b.length)>8?2:1));
+const STOP=new Set("the a an is are was were do does did you your yours i me my we our what whats which who how can could would will of to for and or with about tell show give any have has this that it its in on at be so just please pls really like want know get there some avyxl daemon hey wat wut wht ur plz".split(" "));
+const GEN=new Set(K("project tool app thing build make work portfolio list everything all site page else other another more see look find"));
+const S=Object.fromEntries(Object.entries({
+greet:"hi hey hello yo sup hola heya howdy hiya gm greetings",
+bye:"bye goodbye cya later goodnight gn farewell",
+thanks:"thanks thank thx ty cheers appreciate",
+praise:"cool nice awesome great amazing neat sick dope love good impressive",
+joke:"joke funny pun laugh humor",
+more:"more detail elaborate explain expand further deeper",
+source:"source code link demo open try visit url repo repository",
+similar:"similar another else other related next alternative",
+tags:"made written use using stack tech technology language framework library skill",
+contact:"contact reach touch discord socials social",
+loc:"live based location country uk england britain city timezone",
+web:"web cryptography crypto networking network",
+infra:"infra fps telemetry optimization optimisation performance latency",
+group:"category categories tab section group",
+status:"deployed active hub status released",
+project:"project portfolio",
+about:"who yourself bio introduce intro developer"
+}).map(([k,v])=>[k,K(v)]));
+const KNOWN=K("cpp python lua js javascript html css"),OTHER=K("rust go golang java csharp typescript php ruby swift kotlin react vue node nodejs angular sql bash assembly zig perl haskell");
+const SYN=["encrypt crypto cryptography cipher secure security private privacy e2ee aes","chat message messaging talk live webrtc p2p peer realtime","note file share sharing steganography stego hide secret export","password key vault hash credential generator offline","aim kovaak kovaaks fps train training benchmark voltaic viscose aimerz routine","mouse peripheral sensor latency polling hardware gaming esport","dashboard hub tuning optimization optimisation batch script windows","analyze analyzer telemetry analytic stat performance diagnostic weakness growth"].map(K);
+const bags=proj.map(p=>K([p[3],p[3],p[5],p[6].join(" "),p[0]==="web"?"web cryptography networking":"infra fps telemetry optimization"].join(" ")));
+const df=t=>bags.filter(b=>b.includes(t)).length;
+const hit=(set,toks)=>toks.reduce((n,t)=>n+(set.some(k=>near(t,k))?1:0),0);
+const ctx={p:null};
+
+const first=p=>p[5].split(". ")[0].replace(/\.$/,"");
+const state=p=>p[4]==="deployed"?"live and deployed":p[4]==="hub"?"the hub that links the other tools":"in active development";
+const links=p=>[{l:"source",href:GH+"/"+p[3]},{l:"live demo",href:PG+p[3]},{l:"see in "+GT[p[0]]+" tab",tab:p[0]}];
+const R=(t,c,a,p)=>({t,c:c||"def",a,p});
+const lines=ps=>ps.map(p=>`${p[3]} (${p[4]}): ${first(p)}`).join("\n");
+const rel=p=>proj.filter(x=>x[0]===p[0]&&x!==p);
+
+function named(raw,toks){
+  const ns=raw.replace(/[^a-z0-9]/g,""),out=[];
+  proj.forEach(p=>{const n=stem(p[3]);let pos=toks.findIndex(t=>near(t,n,4));
+    if(pos<0&&p[3].length>=6&&ns.includes(p[3]))pos=0;
+    if(pos>-1)out.push([pos,p])});
+  return out.sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+}
+function topic(content){
+  const q=new Map();
+  content.forEach(t=>q.set(t,1));
+  SYN.forEach(g=>{if(content.some(t=>g.some(k=>near(t,k))))g.forEach(k=>{if(!q.has(k))q.set(k,.6)})});
+  const sc=bags.map((b,i)=>{let s=0;q.forEach((w,t)=>{if(b.includes(t))s+=w*(1+Math.log(proj.length/Math.max(1,df(t))))});return[s,proj[i]]}).sort((a,b)=>b[0]-a[0]);
+  return sc;
+}
+
+function reply(q){
+  const raw=q.toLowerCase(),words=norm(q),toks=words.map(stem),n=toks.length;
+  const h=k=>hit(S[k],toks),pron=/\b(it|its|them|those|one)\b/.test(raw);
+  const ps=named(raw,toks);
+  const cur=ps[0]||((pron||h("more")||h("source")||h("similar"))&&n<=5?ctx.p:null);
+  if(!n)return R("say something and i'll do my best. try a project name, the stack, or how to reach avyxl.");
+  if(/how (are|r) (you|u)|how'?s it going|what'?s up|whats up/.test(raw))return R(pick(["doing great, i'm a few kb of javascript and it's a good day. what would you like to know?","all good here! ask me anything about avyxl's work."]));
+  if(n<=5&&h("greet")&&!ps.length&&!/who|what are/.test(raw))return R(pick(["hey, good to see you!","hi there!","hello, welcome!"])+" i can tell you about avyxl's projects, the stack, or how to get in touch. what are you curious about?");
+  if(n<=6&&h("bye"))return R(pick(["see you around!","bye for now. the discord is always open if you want to chat with avyxl."]));
+  if(n<=6&&h("thanks"))return R(pick(["any time!","happy to help. anything else?","you're welcome!"]));
+  if(n<=3&&h("praise")&&!ps.length)return R(pick(["thank you, avyxl will be glad to hear it.","glad you like it! want to see the projects?"]));
+  if(/^(ok|okay|k|alright|sure|yep|yeah|yes|no|nope|hmm+|lol|haha+)\b/.test(raw)&&n<=2)return R("alright. anything else you'd like to know?");
+  if(h("joke"))return R(pick(["why do programmers prefer dark mode? because light attracts bugs.","i'd tell you a udp joke, but you might not get it.","i'd tell you a webrtc joke, but we'd have to negotiate first.","there are 10 kinds of people: those who understand binary and those who don't."]));
+  if(/who (are|r) you|what (are|r) you|what is daemon|what'?s daemon|are you (a |an )?(real|human|bot|ai|robot|person)|chatgpt|\bllm\b|how do you work|who (made|built|created|wrote) you/.test(raw))
+    return R("i'm daemon, a small assistant avyxl wrote for this site. there's no ai model and no server: i match your question against what's on this page, so i only know about avyxl's work, and it all stays in your browser.");
+  if(/privacy|do you (store|save|track|log|collect|record)|is (this|it|daemon) (private|safe|secure)|what happens to (my|what i)/.test(raw))return R("nothing you type leaves this page. daemon runs entirely in your browser, with no server and no logging.");
+  if(/\bhelp\b|what can (you|i)|what (do|can) you (do|know|answer)|commands|options/.test(raw))return R("i can tell you what avyxl builds, go through any project in detail (try a name like flux or arc), explain the stack, find a project by topic (try 'which one uses encryption?'), compare two projects, and share contact details. typos and follow-ups are fine.","list");
+  if(ps.length>=2){const[a,b]=ps;return R(`${a[3]}: ${first(a)}.\n${b[3]}: ${first(b)}.\n`+(a[0]===b[0]?`both sit under ${GN[a[0]]}.`:`${a[3]} is under ${GN[a[0]]}, while ${b[3]} is under ${GN[b[0]]}.`),"proj",[{l:a[3]+" source",href:GH+"/"+a[3]},{l:b[3]+" source",href:GH+"/"+b[3]}],b);}
+  if(/sound|music|audio|mute|ambient/.test(raw))return R("the speaker icon in the top right toggles the ambient sound. it's synthesized live in your browser, with no audio files.");
+  if(/(site|page|website|portfolio).*(made|built|build|created|design|code)|(made|built|created).*(site|page|website)|\bfont|theme|cursor/.test(raw))return R("avyxl wrote this site by hand in plain html, css and js, with lucide icons. the whole page is one file.");
+  if(/\b(best|favou?rite|coolest|recommend\w*|most (popular|impressive))\b/.test(raw)&&!ps.length)return R("that's avyxl's call, but flux is a good place to start: it shows off the whole idea, serverless peer-to-peer chat with client-side encryption.","proj",links(proj[0]),proj[0]);
+  if(/\bwhy\b/.test(raw)&&/server|dependenc|local|peer|p2p|cryptograph/.test(raw))return R("that's the core idea behind avyxl's tools: no central servers, zero dependencies and local-first design, so your data stays on your device and the tools keep working on their own. flux and dossier show it best.","list");
+  if(cur){
+    const c=cur[3];
+    if(h("source"))return R(`${c} is on github at github.com/avyxl/${c}, and the live demo is at avyxl.github.io/${c}.`,"proj",links(cur),cur);
+    if(h("tags")||/built|made with|written/.test(raw))return R(`${c} is built with ${cur[6].join(", ")}. ${first(cur)}.`,"proj",links(cur),cur);
+    if(h("similar")&&!ps.length){const r=rel(cur);return R(r.length?`if you like ${c}, you might like:\n${lines(r)}`:`${c} is fairly unique. ask "what does avyxl build?" for the full list.`,"list",null,cur)}
+    if(h("more")&&!ps.length)return R(`${c} is ${state(cur)}, part of ${GN[cur[0]]}. ${cur[5]}\nbuilt with ${cur[6].join(", ")}.`+(rel(cur).length?`\nrelated: ${rel(cur).map(x=>x[3]).join(", ")}.`:""),"proj",links(cur),cur);
+    return R(`${c} is ${state(cur)}. ${cur[5]}\nbuilt with ${cur[6].join(", ")}.`,"proj",links(cur),cur);
+  }
+  if(h("source")&&!/where|live|based/.test(raw))return R("everything is on github at github.com/avyxl, and each project has a live demo at avyxl.github.io/<name>.","list",[{l:"github",href:GH}]);
+  const gw=h("web"),gi=h("infra");
+  if((gw||gi)&&(h("project")||h("group")||toks.some(t=>["web","infra","fps"].includes(t)))){const g=gw>=gi?"web":"fps",l=proj.filter(p=>p[0]===g);return R(`under ${GN[g]} there are ${l.length} projects:\n${lines(l)}`,"list",[{l:"open "+GT[g]+" tab",tab:g}])}
+  if(h("status")&&(h("project")||n<=4)){const want=["deployed","active","hub"].filter(s=>words.some(w=>near(w,s)));const l=proj.filter(p=>!want.length||want.includes(p[4]));return R(`${want.length?want.join(" and "):"all"} projects:\n${lines(l)}`,"list")}
+  if(/how many|number of|count/.test(raw)&&h("project")){const w=proj.filter(p=>p[0]==="web").length;return R(`${proj.length} projects: ${w} under ${GN.web} and ${proj.length-w} under ${GN.fps}.`,"list")}
+  if(/\b(hire|hiring|freelanc\w*|commission|available|availability|work with|collab\w*|jobs?|opportunit\w*|open to|prices?|rates?|cost|pay)\b/.test(raw))return R("i can't speak for avyxl's availability or rates, but discord is the best place to ask: doorsondoors.","contact",[{l:"copy discord",copy:1}]);
+  if(/\b(e-?mail|phone|address|age|old|real name|school|salary)\b/.test(raw)&&!/project|how many/.test(raw))return R("that isn't listed here. the way to reach avyxl is discord: doorsondoors.","contact",[{l:"copy discord",copy:1}]);
+  const lk=toks.find(t=>KNOWN.some(k=>near(t,k)||t===k)),lo=toks.find(t=>OTHER.some(k=>near(t,k)));
+  if(lo&&!lk)return R(`avyxl's listed languages are c++, python, lua and js / html. i don't have anything on ${lo}, but you can ask on discord: doorsondoors.`,"contact",[{l:"copy discord",copy:1}]);
+  if(lk){const L=lk==="javascript"?"js":lk,m=proj.filter(p=>p[6].some(t=>K(t)[0]===L||(L==="js"&&0)));
+    return R(L==="js"||L==="html"||L==="css"?"yes, js / html is the base of avyxl's browser tools, and the front end of nearly every project here.":`yes, avyxl writes ${L==="cpp"?"c++":L}.`+(m.length?` you'll find it in ${m.map(p=>p[3]).join(", ")}.`:""),"stack",m.length?[{l:"see "+m[0][3],href:PG+m[0][3]}]:null,m[0])}
+  if(/discord|github|git hub/.test(raw)&&!h("tags"))return R(/github/.test(raw)?"avyxl is @avyxl on github.":"avyxl's discord is doorsondoors.","contact",[{l:"copy discord",copy:1},{l:"github",href:GH}]);
+  if(h("contact")||/(message|text|ping|talk to|speak to|chat with|dm) (you|avyxl|him|them|the dev)|\bdm\b|get in touch/.test(raw))return R("the best way to reach avyxl is discord: doorsondoors. you'll also find avyxl on github at @avyxl.","contact",[{l:"copy discord",copy:1},{l:"github",href:GH}]);
+  if(h("loc")||/where (are|do|is|r) (you|u|avyxl|he|they)|where.*(live|based|located)/.test(raw))return R("avyxl is based in the uk.");
+  const content=words.filter(w=>!STOP.has(w)).map(stem),gen=content.filter(t=>!GEN.has(t)&&!S.web.includes(t)&&!S.project.includes(t));
+  if(h("tags")&&!gen.length||(h("tags")&&/stack|tech|skill|language/.test(raw))){
+    const bl=["cpp","python","lua"].map(l=>[l,proj.filter(p=>p[6].some(t=>K(t)[0]===l))]).filter(x=>x[1].length).map(x=>`${x[0]==="cpp"?"c++":x[0]} in ${x[1].map(p=>p[3]).join(", ")}`);
+    return R("avyxl works in c++, python, lua and js / html."+(bl.length?` you'll find ${bl.join("; ")}. js / html runs the browser tools.`:""),"stack")}
+  if(gen.length){const sc=topic(gen);
+    if(sc[0][0]>=1.2){const top=sc.filter(x=>x[0]>=sc[0][0]*.7&&x[0]>=1.2).slice(0,2).map(x=>x[1]);
+      return R(top.length>1?`two fit that: \n${lines(top)}`:`that sounds like ${top[0][3]}. ${top[0][5]}\nbuilt with ${top[0][6].join(", ")}.`,"proj",links(top[0]),top[0])}}
+  if(h("about")||/avyxl/.test(raw)&&gen.length===0&&n<=6&&!/project|build|make/.test(raw))return R("avyxl is a software developer based in the uk making zero-dependency, local-first web utilities and telemetry systems. no central servers, just peer-to-peer webrtc and client-side cryptography.","list");
+  if(!gen.length||h("project"))return R(`avyxl builds peer-to-peer and local-first tools. ${proj.length} projects so far:\n${lines(proj)}`,"list");
+  return R("hmm, i'm not sure about that one. i know avyxl's projects, the stack, and how to get in touch, so try one of those. typos are fine.");
+}
+
+const $=id=>document.getElementById(id);
+const log=$("dm-log"),form=$("dm-form"),input=$("dm-in"),send=$("dm-send"),chips=$("dm-chips");
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const calm=matchMedia("(prefers-reduced-motion:reduce)").matches;
+const click=()=>{try{sfx.click()}catch(e){}};
+let busy=false;
+function bubble(cls){const d=document.createElement("div");d.className="dm-m "+cls;log.appendChild(d);log.scrollTop=log.scrollHeight;return d}
+function acts(a){
+  const w=document.createElement("div");w.className="dm-acts";
+  a.forEach(x=>{const e=document.createElement(x.href?"a":"button");e.className="dm-l";e.textContent=x.l;
+    if(x.href){e.href=x.href;e.target="_blank";e.rel="noopener"}else e.type="button";
+    e.addEventListener("click",()=>{if(x.copy){const c=document.querySelector("[data-copy]");if(c)c.click();return}click();if(x.tab){const t=document.querySelector('.tab[data-tab="'+x.tab+'"]');if(t)t.click()}});
+    w.appendChild(e)});
+  return w;
+}
+function setChips(k){
+  const r=()=>"tell me about "+pick(proj)[3];
+  const L={proj:["show me the source","what's it built with?","similar projects","what does avyxl build?"],
+    list:[r(),"what's the tech stack?","how do i contact avyxl?"],
+    contact:["what does avyxl build?",r(),"what's the tech stack?"],
+    stack:["which projects use python?",r(),"how do i contact avyxl?"],
+    def:["what does avyxl build?",r(),"what's the tech stack?","how do i contact avyxl?"]}[k]||[];
+  chips.replaceChildren(...L.map(q=>{const b=document.createElement("button");b.type="button";b.textContent=q;b.addEventListener("click",()=>ask(q));return b}));
+}
+async function say(r){
+  const b=bubble("dm-a");b.innerHTML="<span class='dm-typing'><i></i><i></i><i></i></span>";
+  await sleep(calm?0:300+Math.min(r.t.length*3,450));
+  const t=document.createElement("span");b.replaceChildren(t);
+  if(!calm){const st=Math.max(2,Math.ceil(r.t.length/70));for(let i=0;i<r.t.length;i+=st){t.textContent=r.t.slice(0,i+st);log.scrollTop=log.scrollHeight;await sleep(14)}}
+  t.textContent=r.t;
+  if(r.a)b.appendChild(acts(r.a));
+  log.scrollTop=log.scrollHeight;
+}
+async function ask(q){
+  q=q.trim();if(!q||busy)return;
+  busy=true;send.disabled=true;click();
+  bubble("dm-u").textContent=q;
+  let r;try{r=reply(q)}catch(e){console.error("daemon:",e);r=R("something tripped me up. try asking another way.")}
+  if(r.p)ctx.p=r.p;
+  await say(r);setChips(r.c);
+  busy=false;send.disabled=false;
+}
+bubble("dm-a").textContent="hey, i'm daemon. ask me about avyxl's projects, the stack, or how to get in touch. typos and follow-up questions are fine, so just chat. tap a suggestion to start.";
+setChips("def");
+form.addEventListener("submit",e=>{e.preventDefault();if(busy)return;const q=input.value;input.value="";ask(q)});
+})();
+</script>
+
+</body>
+</html>
