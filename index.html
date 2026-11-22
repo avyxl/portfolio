@@ -124,7 +124,7 @@ nav{position:sticky;top:16px;z-index:50;margin:16px 20px 0;display:flex;align-it
 <body>
 
 <div id="vbg">
-  <video id="bgvid" autoplay loop playsinline src="/_blob/af00aff191d84436ec44892ee5db684f"></video>
+  <video id="bgvid" loop playsinline preload="auto" src="bg_audio.mp4"></video>
 </div>
 
 <div id="splash">
@@ -155,7 +155,7 @@ nav{position:sticky;top:16px;z-index:50;margin:16px 20px 0;display:flex;align-it
         <div class="hero-eyebrow">based in the uk</div>
         <h1 class="hero-name">avyxl</h1>
         <div class="hero-role">building <b id="tw"></b><span class="caret"></span></div>
-        <p class="hero-bio">software developer making zero-dependency, local-first web utilities and telemetry systems. no central servers, just peer-to-peer webrtc and client-side cryptography.</p>
+        <p class="hero-bio">fullstack developer and cybersecurity engineer. i write across the stack — python, c++, typescript, c#, lua, html — building local-first web tools, peer-to-peer systems, and security utilities. no central servers, no telemetry, just clean code and client-side cryptography.</p>
         <div class="hero-actions">
           <button class="btn" data-copy>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -255,7 +255,16 @@ P.forEach(([g,ic,c,n,b,d,tags,gh,lv])=>{
     `<article class="card"><div class="card-top"><div class="card-name"><div class="ico" style="--c:${c}">${icon(ic,19)}</div><span>${n}</span></div><span class="badge">${b}</span></div><p class="card-desc">${d}</p><div class="card-foot"><div class="tags">${tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div><div class="links">${lks}</div></div></article>`);
 });
 
-[['file-code','#60a5fa','c++'],['file-json','#facc15','python'],['terminal','#a78bfa','lua'],['layout-template','#fb923c','js / html']].forEach(([ic,c,n])=>
+[
+  ['file-code','#60a5fa','c++'],
+  ['file-json','#facc15','python'],
+  ['terminal','#a78bfa','typescript'],
+  ['layout-template','#fb923c','html / css'],
+  ['file-code','#a3e635','c#'],
+  ['terminal','#f472b6','lua'],
+  ['scan-eye','#f87171','cybersecurity'],
+  ['database','#2dd4bf','webrtc / p2p'],
+].forEach(([ic,c,n])=>
   document.getElementById('stack').insertAdjacentHTML('beforeend',`<div class="chip"><div class="tile" style="--c:${c}">${icon(ic,15)}</div>${n}</div>`));
 
 let entered=false;
@@ -281,7 +290,7 @@ function show(name){
 tabs.forEach(t=>t.addEventListener('click',()=>show(t.dataset.tab)));
 if(location.hash)show(location.hash.slice(1));
 
-const roles=['local-first web tools','peer-to-peer apps','client-side cryptography','telemetry systems'];
+const roles=['fullstack applications','cybersecurity tools','peer-to-peer systems','client-side cryptography','local-first web apps'];
 const tw=document.getElementById('tw');
 let ri=0,ci=0,del=false,twOn=false;
 function startType(){twOn=true;type()}
